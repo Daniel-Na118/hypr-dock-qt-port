@@ -1,5 +1,5 @@
 #!/bin/bash
-# hypr-dock-qt2 installation script
+# hypr-dock installation script
 
 set -e
 
@@ -8,7 +8,7 @@ INSTALL_PREFIX="${1:~/.local/bin}"
 CONFIG_DIR="$HOME/.config/hypr-dock"
 LOCAL_DIR="$HOME/.local/share/hypr-dock"
 
-echo "Installing hypr-dock-qt2..."
+echo "Installing hypr-dock..."
 
 # Create config directory
 mkdir -p "$CONFIG_DIR"
@@ -23,18 +23,18 @@ touch "$LOCAL_DIR/pinned"
 # Create symlink or copy shell files
 if ! command -v quickshell &> /dev/null; then
     echo "Warning: quickshell not found in PATH"
-    echo "Please install quickshell to run hypr-dock-qt2"
+    echo "Please install quickshell to run hypr-dock"
     exit 1
 fi
 
 # Create launcher script
-cat > "$INSTALL_PREFIX/hypr-dock-qt2" << 'EOF'
+cat > "$INSTALL_PREFIX/hypr-dock" << 'EOF'
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 exec quickshell "$SCRIPT_DIR/shell.qml" "$@"
 EOF
 
-chmod +x "$INSTALL_PREFIX/hypr-dock-qt2"
+chmod +x "$INSTALL_PREFIX/hypr-dock"
 
 echo "Installation complete!"
-echo "Run with: hypr-dock-qt2"
+echo "Run with: hypr-dock"

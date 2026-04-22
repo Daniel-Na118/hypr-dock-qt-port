@@ -13,18 +13,18 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}hypr-dock-qt2 Uninstaller${NC}"
+echo -e "${YELLOW}hypr-dock Uninstaller${NC}"
 echo "=================================="
 
 # Check if installed
-if [ ! -f "$INSTALL_PREFIX/hypr-dock-qt2" ]; then
-    echo -e "${RED}✗ hypr-dock-qt2 not found in $INSTALL_PREFIX${NC}"
+if [ ! -f "$INSTALL_PREFIX/hypr-dock" ]; then
+    echo -e "${RED}✗ hypr-dock not found in $INSTALL_PREFIX${NC}"
     exit 1
 fi
 
 # Remove launcher script
 echo "Removing launcher script..."
-rm -f "$INSTALL_PREFIX/hypr-dock-qt2"
+rm -f "$INSTALL_PREFIX/hypr-dock"
 echo -e "${GREEN}✓ Launcher removed${NC}"
 
 # Ask about configuration
@@ -49,4 +49,4 @@ fi
 
 echo ""
 echo -e "${GREEN}Uninstall complete!${NC}"
-echo "hypr-dock-qt2 has been removed from $INSTALL_PREFIX"
+echo "hypr-dock has been removed from $INSTALL_PREFIX"

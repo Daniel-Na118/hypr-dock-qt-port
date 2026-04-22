@@ -94,6 +94,12 @@ hypr-dock-qt2/
 quickshell shell.qml
 ```
 
+Or after installation:
+
+```bash
+hypr-dock
+```
+
 ## Development Notes
 
 - All functionality is maintained from the original Go implementation
