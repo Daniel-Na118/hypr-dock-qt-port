@@ -1,11 +1,11 @@
-# hypr-dock-qt2
+# hypr-dock-qt
 
 A 1:1 port of hypr-dock from Go/GTK to QML/QuickShell
 
 ## Structure
 
 ```
-hypr-dock-qt2/
+hypr-dock-qt-port/
 ├── cmd/hypr-dock/
 │   └── MainWindow.qml          - Main window setup
 ├── internal/

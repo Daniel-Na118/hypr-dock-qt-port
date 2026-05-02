@@ -1,0 +1,4 @@
+singleton Settings 1.0 Settings.qml
+singleton PinnedStore 1.0 PinnedStore.qml
+singleton DockModel 1.0 DockModel.qml
+singleton HyprActions 1.0 HyprActions.qml
