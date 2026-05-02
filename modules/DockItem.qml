@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import Quickshell
 import Quickshell.Widgets
 import "../services"
@@ -161,12 +160,6 @@ Item {
             }
         }
 
-        ToolTip.visible: hoverArea.containsMouse
-            && !menu.visible
-            && root.runningCount === 0
-            && root.displayName.length > 0
-        ToolTip.text: root.displayName
-        ToolTip.delay: 500
     }
 
     Indicator {

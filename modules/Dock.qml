@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import "../services"
 
 PanelWindow {
@@ -131,6 +132,15 @@ PanelWindow {
         onHoveredChanged: {
             if (hovered) hideTimer.stop();
             else if (!root.hoveredButton) hideTimer.restart();
+        }
+    }
+
+    HyprlandFocusGrab {
+        id: dismissGrab
+        windows: root.activeMenu ? [root, root.activeMenu] : [root]
+        active: !!root.activeMenu
+        onCleared: {
+            if (root.activeMenu) root.activeMenu.close();
         }
     }
 }
