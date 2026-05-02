@@ -15,6 +15,9 @@ PanelWindow {
     property int edgeMargin: Settings.margin
     property color bgColor: Qt.rgba(42 / 255, 41 / 255, 49 / 255, 0.473)
 
+    property Item hoveredButton: null
+    property var hoveredEntry: null
+
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "hypr-dock"
@@ -53,8 +56,58 @@ PanelWindow {
                     iconSize: root.iconSize
                     itemPadding: root.itemPadding
                     radius: root.radius
+
+                    onHoverChanged: (entered, button, entry) => {
+                        if (entered) {
+                            root.hoveredButton = button;
+                            root.hoveredEntry = entry;
+                            hideTimer.stop();
+                            if ((entry && entry.toplevels && entry.toplevels.length > 0)) {
+                                showTimer.restart();
+                            } else {
+                                preview.externallyShown = false;
+                            }
+                        } else if (root.hoveredButton === button) {
+                            showTimer.stop();
+                            hideTimer.restart();
+                        }
+                    }
                 }
             }
+        }
+    }
+
+    Timer {
+        id: showTimer
+        interval: 500
+        onTriggered: {
+            if (root.hoveredEntry
+                && root.hoveredEntry.toplevels
+                && root.hoveredEntry.toplevels.length > 0) {
+                preview.externallyShown = true;
+            }
+        }
+    }
+
+    Timer {
+        id: hideTimer
+        interval: 350
+        onTriggered: {
+            if (!preview.hovered) preview.externallyShown = false;
+        }
+    }
+
+    WindowPreviewPopup {
+        id: preview
+        anchorWindow: root
+        anchorItem: root.hoveredButton
+        toplevels: root.hoveredEntry && root.hoveredEntry.toplevels
+            ? root.hoveredEntry.toplevels : []
+        fallbackName: root.hoveredEntry ? root.hoveredEntry.name : ""
+        fallbackIcon: root.hoveredEntry ? root.hoveredEntry.icon : ""
+        onHoveredChanged: {
+            if (hovered) hideTimer.stop();
+            else if (!root.hoveredButton) hideTimer.restart();
         }
     }
 }

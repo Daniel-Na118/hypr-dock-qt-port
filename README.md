@@ -111,3 +111,4 @@ hypr-dock
 Original version can be found in: https://github.com/lotos-linux/hypr-dock
 
 I kind of made this project for my own use so pls don't judge xD
+Slowly implementing one by one, but working on my own arch ricing as well, so I don't commit that often
