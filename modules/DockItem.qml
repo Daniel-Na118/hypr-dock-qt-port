@@ -14,7 +14,7 @@ Item {
 
     readonly property string iconName: item ? item.icon : ""
     readonly property string displayName: item ? item.name : ""
-    readonly property int runningCount: item && item.windows ? item.windows.length : 0
+    readonly property int runningCount: item && item.toplevels ? item.toplevels.length : 0
 
     readonly property int indicatorWidth: Math.round(iconSize * 0.56)
     readonly property int indicatorHeight: Math.max(2, Math.round(indicatorWidth * 9 / 48))
@@ -35,7 +35,7 @@ Item {
         IconImage {
             anchors.centerIn: parent
             implicitSize: root.iconSize
-            source: root.iconName ? Quickshell.iconPath(root.iconName, true) : ""
+            source: root.iconName ? Quickshell.iconPath(root.iconName, "image-missing") : ""
         }
 
         MouseArea {
@@ -46,8 +46,9 @@ Item {
             onClicked: mouse => {
                 if (mouse.button === Qt.LeftButton) {
                     HyprActions.activate(root.item);
+                } else if (mouse.button === Qt.RightButton && root.item) {
+                    PinnedStore.toggle(root.item.appId || root.item.key);
                 }
-                // Right-click context menu lands in phase 3.
             }
         }
 
