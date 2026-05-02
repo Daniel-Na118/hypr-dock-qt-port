@@ -49,6 +49,7 @@ PanelWindow {
                 delegate: DockItem {
                     required property var modelData
                     item: modelData
+                    panelWindow: root
                     iconSize: root.iconSize
                     itemPadding: root.itemPadding
                     radius: root.radius
