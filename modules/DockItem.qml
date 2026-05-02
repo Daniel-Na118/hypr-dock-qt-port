@@ -1,16 +1,21 @@
 import QtQuick
+import QtQuick.Controls
+import Quickshell
 import Quickshell.Widgets
+import "../services"
 
 Item {
     id: root
 
-    property string iconName: ""
-    property int runningCount: 0
+    property var item                 // entry from DockModel.items
     property int iconSize: 23
     property int itemPadding: 4
     property int radius: 12
 
-    // Indicator dimensions: width = iconSize * 0.56, original SVG aspect 48:9.
+    readonly property string iconName: item ? item.icon : ""
+    readonly property string displayName: item ? item.name : ""
+    readonly property int runningCount: item && item.windows ? item.windows.length : 0
+
     readonly property int indicatorWidth: Math.round(iconSize * 0.56)
     readonly property int indicatorHeight: Math.max(2, Math.round(indicatorWidth * 9 / 48))
     readonly property int indicatorGap: 1
@@ -37,7 +42,18 @@ Item {
             id: hoverArea
             anchors.fill: parent
             hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: mouse => {
+                if (mouse.button === Qt.LeftButton) {
+                    HyprActions.activate(root.item);
+                }
+                // Right-click context menu lands in phase 3.
+            }
         }
+
+        ToolTip.visible: hoverArea.containsMouse && root.displayName.length > 0
+        ToolTip.text: root.displayName
+        ToolTip.delay: 500
     }
 
     Indicator {
