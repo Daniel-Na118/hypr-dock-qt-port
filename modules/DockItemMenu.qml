@@ -7,8 +7,15 @@ PopupWindow {
 
     property var anchorWindow                 // PanelWindow
     property Item anchorItem                  // dock item rect
+    property var controller                   // optional: must have notifyMenuClosed(menu)
     // rows: [{ kind: "row" | "separator", label, icon, onTriggered }]
     property var rows: []
+
+    onVisibleChanged: {
+        if (!visible && controller && controller.notifyMenuClosed) {
+            controller.notifyMenuClosed(root);
+        }
+    }
 
     readonly property int rowHeight: 24
     readonly property int separatorHeight: 7

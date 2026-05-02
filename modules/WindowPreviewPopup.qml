@@ -70,13 +70,43 @@ PopupWindow {
                     required property var modelData
                     spacing: 4
 
-                    Text {
+                    RowLayout {
                         Layout.fillWidth: true
                         Layout.maximumWidth: root.previewMaxWidth
-                        text: cell.modelData ? (cell.modelData.title || root.fallbackName) : ""
-                        color: Qt.rgba(1, 1, 1, 0.92)
-                        font.pixelSize: 11
-                        elide: Text.ElideRight
+                        spacing: 6
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: cell.modelData ? (cell.modelData.title || root.fallbackName) : ""
+                            color: Qt.rgba(1, 1, 1, 0.92)
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                        }
+
+                        Rectangle {
+                            Layout.preferredWidth: 16
+                            Layout.preferredHeight: 16
+                            radius: 8
+                            color: titleClose.containsMouse
+                                ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(1, 1, 1, 0.08)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "×"
+                                color: Qt.rgba(1, 1, 1, 0.92)
+                                font.pixelSize: 13
+                            }
+
+                            MouseArea {
+                                id: titleClose
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (cell.modelData && cell.modelData.close) cell.modelData.close();
+                                }
+                            }
+                        }
                     }
 
                     Rectangle {

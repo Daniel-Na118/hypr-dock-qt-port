@@ -109,13 +109,13 @@ Item {
             rows.push({
                 kind: "row",
                 label: "Close",
-                icon: "window-close",
                 onTriggered: () => HyprActions.closeToplevel(toplevels[0])
             });
         }
 
         menu.rows = rows;
-        menu.open();
+        if (panelWindow && panelWindow.requestMenuOpen) panelWindow.requestMenuOpen(menu);
+        else menu.open();
     }
 
     Rectangle {
@@ -182,5 +182,6 @@ Item {
         id: menu
         anchorWindow: root.panelWindow
         anchorItem: root
+        controller: root.panelWindow
     }
 }
