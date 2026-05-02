@@ -107,3 +107,7 @@ hypr-dock
 - Same folder structure is preserved for maintainability
 - JavaScript/QML used instead of Go for UI logic
 - Unix socket communication retained for Hyprland IPC
+
+Original version can be found in: https://github.com/lotos-linux/hypr-dock
+
+I kind of made this project for my own use so pls don't judge xD
