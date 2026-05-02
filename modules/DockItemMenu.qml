@@ -1,28 +1,30 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 
 PopupWindow {
     id: root
 
-    // Required:
-    property var anchorWindow                 // PanelWindow above which we anchor
-    property Item anchorItem                  // dock item rectangle
-    // Row schema: { kind: "row" | "separator", label, icon, enabled, onTriggered, indent }
+    property var anchorWindow                 // PanelWindow
+    property Item anchorItem                  // dock item rect
+    // rows: [{ kind: "row" | "separator", label, icon, onTriggered }]
     property var rows: []
 
-    readonly property int rowHeight: 22
+    readonly property int rowHeight: 24
     readonly property int separatorHeight: 7
-    readonly property int hPadding: 10
-    readonly property int vPadding: 6
-    readonly property int gapToItem: 6
+    readonly property int rowHPadding: 10
+    readonly property int rowVPadding: 6
+    readonly property int outerPadding: 6
+    readonly property int gapToItem: 8
+    readonly property int iconSize: 14
+    readonly property int textIconSpacing: 8
+    readonly property int minRowWidth: 140
+    readonly property int maxRowWidth: 320
 
     function open() { visible = true; }
     function close() { visible = false; }
     function trigger(row) {
         if (!row || row.kind === "separator") return;
-        if (row.enabled === false) return;
         close();
         if (typeof row.onTriggered === "function") row.onTriggered();
     }
@@ -48,83 +50,88 @@ PopupWindow {
         id: bg
         anchors.fill: parent
         radius: 12
-        color: Qt.rgba(42 / 255, 41 / 255, 49 / 255, 0.92)
+        color: Qt.rgba(42 / 255, 41 / 255, 49 / 255, 0.94)
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.06)
 
-        implicitWidth: column.implicitWidth + root.hPadding * 2
-        implicitHeight: column.implicitHeight + root.vPadding * 2
+        implicitWidth: Math.min(root.maxRowWidth,
+            Math.max(root.minRowWidth, column.implicitWidth)) + root.outerPadding * 2
+        implicitHeight: column.implicitHeight + root.outerPadding * 2
 
-        ColumnLayout {
+        Column {
             id: column
-            anchors.fill: parent
-            anchors.margins: root.vPadding
+            x: root.outerPadding
+            y: root.outerPadding
+            width: bg.width - root.outerPadding * 2
             spacing: 0
 
             Repeater {
                 model: root.rows
-                delegate: Loader {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    sourceComponent: modelData.kind === "separator" ? sepComp : rowComp
 
-                    Component {
-                        id: sepComp
-                        Item {
-                            implicitHeight: root.separatorHeight
-                            Rectangle {
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.leftMargin: root.hPadding - 4
-                                anchors.rightMargin: root.hPadding - 4
-                                height: 1
-                                color: Qt.rgba(1, 1, 1, 0.08)
-                            }
-                        }
+                Item {
+                    id: rowRoot
+                    required property var modelData
+                    readonly property bool isSeparator: modelData.kind === "separator"
+
+                    width: column.width
+                    implicitWidth: isSeparator
+                        ? root.minRowWidth
+                        : (root.rowHPadding * 2
+                           + (modelData.icon ? root.iconSize + root.textIconSpacing : 0)
+                           + label.implicitWidth)
+                    implicitHeight: isSeparator ? root.separatorHeight : root.rowHeight
+
+                    // Separator
+                    Rectangle {
+                        visible: rowRoot.isSeparator
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.leftMargin: root.rowHPadding - 4
+                        anchors.rightMargin: root.rowHPadding - 4
+                        height: 1
+                        color: Qt.rgba(1, 1, 1, 0.10)
                     }
 
-                    Component {
-                        id: rowComp
-                        Rectangle {
-                            implicitHeight: root.rowHeight
-                            radius: 6
-                            color: hover.containsMouse && (modelData.enabled !== false)
-                                ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                    // Row
+                    Rectangle {
+                        visible: !rowRoot.isSeparator
+                        anchors.fill: parent
+                        radius: 6
+                        color: hover.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
 
-                            Row {
-                                anchors.fill: parent
-                                anchors.leftMargin: root.hPadding - 4 + (modelData.indent ? 14 : 0)
-                                anchors.rightMargin: root.hPadding - 4
-                                spacing: 8
+                        IconImage {
+                            id: rowIcon
+                            visible: !!rowRoot.modelData.icon
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: root.rowHPadding
+                            implicitSize: root.iconSize
+                            source: rowRoot.modelData.icon
+                                ? Quickshell.iconPath(rowRoot.modelData.icon, "image-missing")
+                                : ""
+                        }
 
-                                IconImage {
-                                    visible: !!modelData.icon
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    implicitSize: 14
-                                    source: modelData.icon
-                                        ? Quickshell.iconPath(modelData.icon, "image-missing") : ""
-                                }
+                        Text {
+                            id: label
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: rowIcon.visible ? rowIcon.right : parent.left
+                            anchors.leftMargin: rowIcon.visible ? root.textIconSpacing : root.rowHPadding
+                            anchors.right: parent.right
+                            anchors.rightMargin: root.rowHPadding
+                            text: rowRoot.modelData.label || ""
+                            color: Qt.rgba(1, 1, 1, 0.92)
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                        }
 
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: modelData.label || ""
-                                    color: (modelData.enabled === false)
-                                        ? Qt.rgba(1, 1, 1, 0.35) : Qt.rgba(1, 1, 1, 0.92)
-                                    font.pixelSize: 12
-                                    elide: Text.ElideRight
-                                }
-                            }
-
-                            MouseArea {
-                                id: hover
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                acceptedButtons: Qt.LeftButton
-                                cursorShape: (modelData.enabled === false)
-                                    ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                onClicked: root.trigger(modelData)
-                            }
+                        MouseArea {
+                            id: hover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.trigger(rowRoot.modelData)
                         }
                     }
                 }

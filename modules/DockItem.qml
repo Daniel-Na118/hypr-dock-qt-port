@@ -8,10 +8,12 @@ Item {
     id: root
 
     property var item                 // entry from DockModel.items
-    property var panelWindow          // the Dock PanelWindow (for popup anchor)
+    property var panelWindow          // PanelWindow ref (popup anchor)
     property int iconSize: 23
     property int itemPadding: 4
     property int radius: 12
+
+    signal hoverChanged(bool entered, Item button, var entry)
 
     readonly property string iconName: item ? item.icon : ""
     readonly property string displayName: item ? item.name : ""
@@ -27,26 +29,21 @@ Item {
     readonly property int indicatorHeight: Math.max(2, Math.round(indicatorWidth * 9 / 48))
     readonly property int indicatorGap: 1
 
+    property int _cycleIdx: -1
+
     implicitWidth: iconSize + itemPadding * 2
     implicitHeight: iconSize + itemPadding * 2 + indicatorHeight + indicatorGap
 
-    function _windowRows() {
-        const rows = [];
+    function _cycleNext() {
+        if (toplevels.length === 0) return;
+        let idx = -1;
         for (let i = 0; i < toplevels.length; ++i) {
-            const t = toplevels[i];
-            rows.push({
-                kind: "row",
-                label: t.title || displayName,
-                onTriggered: () => HyprActions.focusToplevel(t)
-            });
+            if (toplevels[i] && toplevels[i].activated) { idx = i; break; }
         }
-        return rows;
-    }
-
-    function _showWindowsMenu() {
-        if (!item) return;
-        menu.rows = _windowRows();
-        menu.open();
+        const start = idx >= 0 ? idx : root._cycleIdx;
+        const next = (start + 1) % toplevels.length;
+        root._cycleIdx = next;
+        HyprActions.focusToplevel(toplevels[next]);
     }
 
     function _showContextMenu() {
@@ -54,11 +51,19 @@ Item {
         const entry = item.desktopEntry;
         const rows = [];
 
-        // Open windows
-        rows.push.apply(rows, _windowRows());
-        if (rows.length > 0) rows.push({ kind: "separator" });
+        // 1. Windows list (each row: app icon + title -> focus that toplevel)
+        for (let i = 0; i < toplevels.length; ++i) {
+            const t = toplevels[i];
+            rows.push({
+                kind: "row",
+                label: t.title || displayName,
+                icon: iconName,
+                onTriggered: () => HyprActions.focusToplevel(t)
+            });
+        }
+        if (toplevels.length > 0) rows.push({ kind: "separator" });
 
-        // Desktop actions
+        // 2. .desktop Actions
         if (entry && entry.actions) {
             for (let i = 0; i < entry.actions.length; ++i) {
                 const a = entry.actions[i];
@@ -72,30 +77,39 @@ Item {
             if (entry.actions.length > 0) rows.push({ kind: "separator" });
         }
 
-        // Launch new window
+        // 3. Launch row.
+        //    - hidden entirely if running AND singleMainWindow
+        //    - "{AppName}" with no windows; "New Window - {AppName}" with windows
         if (entry) {
             const single = !!entry.singleMainWindow;
-            rows.push({
-                kind: "row",
-                label: "Launch new window",
-                enabled: !single,
-                onTriggered: () => HyprActions.launch(entry)
-            });
+            const skipLaunch = (toplevels.length > 0) && single;
+            if (!skipLaunch) {
+                const baseName = entry.name || displayName;
+                const launchLabel = toplevels.length === 0
+                    ? baseName
+                    : "New Window - " + baseName;
+                rows.push({
+                    kind: "row",
+                    label: launchLabel,
+                    icon: iconName,
+                    onTriggered: () => HyprActions.launch(entry)
+                });
+            }
         }
 
-        // Pin / Unpin
+        // 4. Pin / Unpin
         rows.push({
             kind: "row",
-            label: item.pinned ? "Unpin from dock" : "Pin to dock",
+            label: item.pinned ? "Unpin" : "Pin",
             onTriggered: () => PinnedStore.toggle(item.appId || item.key)
         });
 
-        // Close window (only meaningful with exactly one window)
+        // 5. Close (only when exactly 1 window)
         if (toplevels.length === 1) {
-            rows.push({ kind: "separator" });
             rows.push({
                 kind: "row",
-                label: "Close window",
+                label: "Close",
+                icon: "window-close",
                 onTriggered: () => HyprActions.closeToplevel(toplevels[0])
             });
         }
@@ -129,6 +143,8 @@ Item {
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: Qt.PointingHandCursor
+            onEntered: root.hoverChanged(true, root, root.item)
+            onExited:  root.hoverChanged(false, root, root.item)
             onClicked: mouse => {
                 if (!root.item) return;
                 if (mouse.button === Qt.LeftButton) {
@@ -137,7 +153,7 @@ Item {
                     } else if (root.runningCount === 1) {
                         HyprActions.focusToplevel(root.toplevels[0]);
                     } else {
-                        root._showWindowsMenu();
+                        root._cycleNext();
                     }
                 } else if (mouse.button === Qt.RightButton) {
                     root._showContextMenu();
@@ -145,7 +161,10 @@ Item {
             }
         }
 
-        ToolTip.visible: hoverArea.containsMouse && !menu.visible && root.displayName.length > 0
+        ToolTip.visible: hoverArea.containsMouse
+            && !menu.visible
+            && root.runningCount === 0
+            && root.displayName.length > 0
         ToolTip.text: root.displayName
         ToolTip.delay: 500
     }
