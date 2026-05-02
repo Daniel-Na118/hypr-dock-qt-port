@@ -1,106 +1,78 @@
 pragma Singleton
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
+import Quickshell.Wayland
 import "."
 
 Singleton {
     id: root
 
     // Each entry: {
-    //   key:           string  // class (or normalized title fallback)
+    //   key:           string  // appId (or pinned class) lowercased
     //   pinned:        bool
-    //   windows:       [{ address, title, workspace }]
+    //   toplevels:     [ToplevelManager.Toplevel]   // live refs, expose .activate(), .activated, .title
     //   desktopEntry:  DesktopEntry | null
-    //   icon:          string  // freedesktop icon name (or class fallback)
+    //   icon:          string  // freedesktop icon name or appId fallback
     //   name:          string  // display name
     // }
     property var items: []
 
-    // Pull dependencies as bindable expressions.
-    readonly property var _toplevels: Hyprland.toplevels ? Hyprland.toplevels.values : []
+    readonly property var _toplevels: ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
     readonly property var _pinned: PinnedStore.list
 
-    onItemsChanged: {} // keep property reactive
     on_ToplevelsChanged: _rebuild()
     on_PinnedChanged: _rebuild()
     Component.onCompleted: _rebuild()
 
-    function _normalize(s) {
-        return (s || "").toString().toLowerCase().replace(/\s+/g, "_");
+    Connections {
+        target: DesktopEntries
+        function onApplicationsChanged() { root._rebuild(); }
     }
 
-    function _resolveDesktopEntry(cls) {
-        if (!cls) return null;
-        const direct = DesktopEntries.byId(cls);
-        if (direct) return direct;
-        const lower = DesktopEntries.byId(cls.toLowerCase());
-        if (lower) return lower;
-        // Fallback scan: id endsWith "." + cls (e.g. org.kde.dolphin for class "dolphin")
-        const apps = DesktopEntries.applications ? DesktopEntries.applications.values : [];
-        const needle = cls.toLowerCase();
-        for (let i = 0; i < apps.length; ++i) {
-            const id = (apps[i].id || "").toLowerCase();
-            if (id === needle) return apps[i];
-            if (id.endsWith("." + needle)) return apps[i];
-        }
-        return null;
+    function _entryFor(appId) {
+        if (!appId) return null;
+        return DesktopEntries.heuristicLookup(appId) || null;
     }
 
     function _rebuild() {
-        const toplevels = root._toplevels || [];
+        const tops = root._toplevels || [];
         const pinned = root._pinned || [];
 
-        // Group windows by class (or normalized title fallback).
-        const groups = {};
+        const groups = new Map();
         const order = [];
-        for (let i = 0; i < toplevels.length; ++i) {
-            const t = toplevels[i];
-            const cls = t.class && t.class.length > 0
-                ? t.class
-                : root._normalize(t.title);
-            if (!groups[cls]) {
-                groups[cls] = [];
-                order.push(cls);
+
+        // Seed pinned classes first (so pinned-but-not-running entries appear).
+        for (const cls of pinned) {
+            const key = (cls || "").toLowerCase();
+            if (!key || groups.has(key)) continue;
+            groups.set(key, { displayId: cls, pinned: true, toplevels: [] });
+            order.push(key);
+        }
+
+        // Group running toplevels by appId (lowercased).
+        for (const t of tops) {
+            const appId = t.appId || "";
+            if (!appId) continue;
+            const key = appId.toLowerCase();
+            if (!groups.has(key)) {
+                groups.set(key, { displayId: appId, pinned: false, toplevels: [] });
+                order.push(key);
             }
-            groups[cls].push({
-                address: t.address,
-                title: t.title,
-                workspace: t.workspace ? t.workspace.id : -1
-            });
+            groups.get(key).toplevels.push(t);
         }
 
         const out = [];
-        const seen = {};
-
-        // 1. Pinned items first, in config order.
-        for (let i = 0; i < pinned.length; ++i) {
-            const cls = pinned[i];
-            const entry = root._resolveDesktopEntry(cls);
-            const wins = groups[cls] || [];
+        for (const key of order) {
+            const g = groups.get(key);
+            const entry = root._entryFor(g.displayId);
             out.push({
-                key: cls,
-                pinned: true,
-                windows: wins,
+                key: key,
+                appId: g.displayId,
+                pinned: g.pinned,
+                toplevels: g.toplevels,
                 desktopEntry: entry,
-                icon: (entry && entry.icon) ? entry.icon : cls,
-                name: (entry && entry.name) ? entry.name : cls
-            });
-            seen[cls] = true;
-        }
-
-        // 2. Unpinned-but-running, in window-creation order.
-        for (let i = 0; i < order.length; ++i) {
-            const cls = order[i];
-            if (seen[cls]) continue;
-            const entry = root._resolveDesktopEntry(cls);
-            out.push({
-                key: cls,
-                pinned: false,
-                windows: groups[cls],
-                desktopEntry: entry,
-                icon: (entry && entry.icon) ? entry.icon : cls,
-                name: (entry && entry.name) ? entry.name : cls
+                icon: (entry && entry.icon) ? entry.icon : g.displayId,
+                name: (entry && entry.name) ? entry.name : g.displayId
             });
         }
 
