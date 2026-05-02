@@ -17,6 +17,28 @@ PanelWindow {
 
     property Item hoveredButton: null
     property var hoveredEntry: null
+    property var activeMenu: null
+
+    function requestMenuOpen(menu) {
+        if (activeMenu && activeMenu !== menu) activeMenu.close();
+        showTimer.stop();
+        hideTimer.stop();
+        preview.externallyShown = false;
+        activeMenu = menu;
+        menu.open();
+    }
+
+    function requestPreviewOpen() {
+        if (activeMenu) {
+            activeMenu.close();
+            activeMenu = null;
+        }
+        preview.externallyShown = true;
+    }
+
+    function notifyMenuClosed(menu) {
+        if (activeMenu === menu) activeMenu = null;
+    }
 
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
@@ -62,7 +84,8 @@ PanelWindow {
                             root.hoveredButton = button;
                             root.hoveredEntry = entry;
                             hideTimer.stop();
-                            if ((entry && entry.toplevels && entry.toplevels.length > 0)) {
+                            const hasWindows = entry && entry.toplevels && entry.toplevels.length > 0;
+                            if (hasWindows && !root.activeMenu) {
                                 showTimer.restart();
                             } else {
                                 preview.externallyShown = false;
@@ -81,10 +104,10 @@ PanelWindow {
         id: showTimer
         interval: 500
         onTriggered: {
-            if (root.hoveredEntry
-                && root.hoveredEntry.toplevels
-                && root.hoveredEntry.toplevels.length > 0) {
-                preview.externallyShown = true;
+            if (root.activeMenu) return;
+            const e = root.hoveredEntry;
+            if (e && e.toplevels && e.toplevels.length > 0) {
+                root.requestPreviewOpen();
             }
         }
     }
